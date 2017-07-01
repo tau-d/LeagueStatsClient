@@ -37,7 +37,6 @@ import java.awt.event.ItemListener;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -63,8 +62,10 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.ParseException;
 
-// TODO: allow user to choose what columns to show
-// TODO: allow user to filter players, champs with low # games, etc.
+// TODO: allow user to filter champs with low # games, etc.
+// TODO: update table button
+// TODO: tabs for overall winrate/kda
+// TODO: preset column filter buttons (ex. show only player, champ, cs0-10, cs10-20, xp0-10, ...)
 
 public class MyTableUI extends JPanel {
 	private static final long serialVersionUID = 8306936611643892010L;
@@ -101,6 +102,12 @@ public class MyTableUI extends JPanel {
     	private static final String NUM_WINS = "numWins";
     	private static final String NUM_GAMES= "numGames";
     	private static final String WIN_RATE = "winRate";
+    	private static final String AVG_CS_0_TO_10 = "avgCs0to10";
+    	private static final String AVG_CS_10_TO_20 = "avgCs10to20";
+    	private static final String AVG_GOLD_0_TO_10 = "avgGold0to10";
+    	private static final String AVG_GOLD_10_TO_20 = "avgGold10to20";
+    	private static final String AVG_XP_0_TO_10 = "avgXp0to10";
+    	private static final String AVG_XP_10_TO_20 = "avgXp10to20";
     	
     	// Table column headers
     	private static final String COL_PLAYER_NAME = "Summoner";
@@ -112,6 +119,12 @@ public class MyTableUI extends JPanel {
     	private static final String COL_NUM_WINS= "# Wins";
     	private static final String COL_NUM_GAMES= "# Games";
     	private static final String COL_WIN_RATE = "Win %";
+    	private static final String COL_CS_0_TO_10 = "cs/min@0-10";
+    	private static final String COL_CS_10_TO_20 = "cs/min@10-20";
+    	private static final String COL_GOLD_0_TO_10 = "gold/min@0-10";
+    	private static final String COL_GOLD_10_TO_20 = "gold/min@10-20";
+    	private static final String COL_XP_0_TO_10 = "xp/min@0-10";
+    	private static final String COL_XP_10_TO_20 = "xp/min@10-20";
     	
         private static final String[] DEFAULT_COLS = {
         								COL_PLAYER_NAME,
@@ -122,7 +135,13 @@ public class MyTableUI extends JPanel {
                                         COL_KDA,
                                         COL_NUM_WINS,
                                         COL_NUM_GAMES,
-                                        COL_WIN_RATE
+                                        COL_WIN_RATE,
+                                        COL_CS_0_TO_10,
+                                        COL_CS_10_TO_20,
+                                        COL_GOLD_0_TO_10,
+                                        COL_GOLD_10_TO_20,
+                                        COL_XP_0_TO_10,
+                                        COL_XP_10_TO_20
                                   	};
         
         private static final Map<String, Integer> COL_HEADER_TO_INDEX = new HashMap<>();
@@ -167,6 +186,12 @@ public class MyTableUI extends JPanel {
                 	newRow.add(myParseInt(row, NUM_WINS));
                 	newRow.add(myParseInt(row, NUM_GAMES));
                 	newRow.add(myParseFloat(row, WIN_RATE));
+                	newRow.add(myParseFloat(row, AVG_CS_0_TO_10));
+                	newRow.add(myParseFloat(row, AVG_CS_10_TO_20));
+                	newRow.add(myParseFloat(row, AVG_GOLD_0_TO_10));
+                	newRow.add(myParseFloat(row, AVG_GOLD_10_TO_20));
+                	newRow.add(myParseFloat(row, AVG_XP_0_TO_10));
+                	newRow.add(myParseFloat(row, AVG_XP_10_TO_20));
                 	
                 	ALL_DATA.add(newRow);
                 	postFilterRows.add((List<Object>) newRow.clone());
@@ -181,7 +206,7 @@ public class MyTableUI extends JPanel {
         	if (o == null) {
         		return null;
         	} else {
-        		return Integer.parseInt((String) o);        		
+        		return Integer.parseInt((String) o); 
         	}
         }
         
