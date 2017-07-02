@@ -288,7 +288,7 @@ public class MyTableUI extends JPanel {
     	JMenu menu = new JMenu("Columns");
     	
     	for (int i = 2; i < FetchStatsHelper.COL_HEADERS.length; ++i) { // cannot filter player name and champion
-    		JCheckBoxMenuItem columnItem = new JCheckBoxMenuItem(FetchStatsHelper.COL_HEADERS[i], true);
+    		JCheckBoxMenuItem columnItem = getJCheckBoxMenuItem(FetchStatsHelper.COL_HEADERS[i]);
     		final Object identifier = FetchStatsHelper.COL_HEADERS[i];
     		
     		columnItem.setUI(new BasicCheckBoxMenuItemUI() { // make menu stay open after toggling checkbox
@@ -303,14 +303,10 @@ public class MyTableUI extends JPanel {
 				public void itemStateChanged(ItemEvent e) {
 					int stateChange = e.getStateChange();
 					TableColumn col = table.getColumn(identifier);
-					if (stateChange == ItemEvent.DESELECTED) {
-						col.setResizable(false);
-						col.setMinWidth(0);
-						col.setMaxWidth(0);
-					} else if (stateChange == ItemEvent.SELECTED) {
-						col.setResizable(true);
-						col.setMaxWidth(Integer.MAX_VALUE);
-						col.setPreferredWidth(75);
+					if (stateChange == ItemEvent.DESELECTED) { // hide column
+						hideColumn(col);
+					} else if (stateChange == ItemEvent.SELECTED) { // show column
+						showColumn(col);
 					} else {
 						System.err.println("Unexpected state change: " + stateChange);
 					}
@@ -320,6 +316,31 @@ public class MyTableUI extends JPanel {
     		menu.add(columnItem);
     	}
     	return menu;
+    }
+    
+    private void hideColumn(TableColumn col) {
+    	col.setResizable(false);
+		col.setMinWidth(0);
+		col.setMaxWidth(0);
+    }
+    
+    private void showColumn(TableColumn col) {
+    	col.setResizable(true);
+		col.setMaxWidth(Integer.MAX_VALUE);
+		col.setPreferredWidth(75);
+    }
+    
+    private JCheckBoxMenuItem getJCheckBoxMenuItem(String id) {
+    	if (id == FetchStatsHelper.COL_KILLS ||
+			id == FetchStatsHelper.COL_DEATHS ||
+			id == FetchStatsHelper.COL_ASSISTS || 
+			id == FetchStatsHelper.COL_NUM_WINS) {
+    		
+    		hideColumn(table.getColumn(id));    		
+			return new JCheckBoxMenuItem(id, false);
+		} else {
+			return new JCheckBoxMenuItem(id, true);
+		}
     }
     
 	private static void centerOnScreen(JFrame frame) {
