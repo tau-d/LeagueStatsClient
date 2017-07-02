@@ -1,297 +1,131 @@
-/*
- * Copyright (c) 1995, 2008, Oracle and/or its affiliates. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   - Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *   - Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- *   - Neither the name of Oracle or the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */ 
-
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.MenuItem;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.text.NumberFormat;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.Vector;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.MenuSelectionManager;
+import javax.swing.RowFilter;
 import javax.swing.plaf.basic.BasicCheckBoxMenuItemUI;
-import javax.swing.table.AbstractTableModel;
+import javax.swing.plaf.basic.BasicMenuItemUI;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableRowSorter;
 
-import org.apache.commons.io.IOUtils;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
-import org.json.simple.parser.ParseException;
+import com.sun.xml.internal.ws.api.Component;
 
 // TODO: allow user to filter champs with low # games, etc.
 // TODO: update table button
 // TODO: tabs for overall winrate/kda
 // TODO: preset column filter buttons (ex. show only player, champ, cs0-10, cs10-20, xp0-10, ...)
+// TODO: only include matches within certain time period?
 
 public class MyTableUI extends JPanel {
 	private static final long serialVersionUID = 8306936611643892010L;
 
-	private MyTableModel model;
+	private JTable table;
+	private DefaultTableModel model;
+	private TableRowSorter<DefaultTableModel> sorter;
+	
+	private Set<String> filteredPlayers = new HashSet<>();
+	private Set<String> filteredChamps = new HashSet<>();	 
 	
 	public MyTableUI() {
         super(new GridLayout(1,0));
 
-        model = new MyTableModel();
+        model = new DefaultTableModel(FetchStatsHelper.getData(), FetchStatsHelper.COL_HEADERS);
+        model.setColumnIdentifiers(FetchStatsHelper.COL_HEADERS);
         
-        JTable table = new JTable(model);
+        table = new JTable(model);
         table.setPreferredScrollableViewportSize(new Dimension(900, 800));
         table.setFillsViewportHeight(true);
-        table.setAutoCreateRowSorter(true);
-
-        //Create the scroll pane and add the table to it.
+        //table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        
+        setCellRenderers();
+        
+        sorter = new TableRowSorter<>(model);
+        sorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
+			@Override
+			public boolean include(javax.swing.RowFilter.Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+				if (filteredPlayers.contains(entry.getStringValue(0))) {
+					return false;
+				} else if (filteredChamps.contains(entry.getStringValue(1))) {
+					return false;
+				}
+				return true;
+			}        	
+        });
+        table.setRowSorter(sorter);
+        
         JScrollPane scrollPane = new JScrollPane(table);
-
-        //Add the scroll pane to this panel.
         add(scrollPane);
     }
-
 	
-    private static class MyTableModel extends AbstractTableModel {
-		// Constants
-    	private static final long serialVersionUID = -4676918035836585921L;
+	private void setCellRenderers() {
+		NumberFormat floatFormatter = NumberFormat.getNumberInstance();
+		floatFormatter.setMinimumFractionDigits(2);
+		floatFormatter.setMaximumFractionDigits(2);
 		
-    	// Query specific column names
-		private static final String TOT_KILLS = "totalKills";
-    	private static final String TOT_DEATHS = "totalDeaths";
-    	private static final String TOT_ASSISTS = "totalAssists";
-    	private static final String KDA = "KDA";
-    	private static final String NUM_WINS = "numWins";
-    	private static final String NUM_GAMES= "numGames";
-    	private static final String WIN_RATE = "winRate";
-    	private static final String AVG_CS_0_TO_10 = "avgCs0to10";
-    	private static final String AVG_CS_10_TO_20 = "avgCs10to20";
-    	private static final String AVG_GOLD_0_TO_10 = "avgGold0to10";
-    	private static final String AVG_GOLD_10_TO_20 = "avgGold10to20";
-    	private static final String AVG_XP_0_TO_10 = "avgXp0to10";
-    	private static final String AVG_XP_10_TO_20 = "avgXp10to20";
-    	
-    	// Table column headers
-    	private static final String COL_PLAYER_NAME = "Summoner";
-    	private static final String COL_CHAMP = "Champion";
-    	private static final String COL_KILLS = "Kills";
-    	private static final String COL_DEATHS= "Deaths";
-    	private static final String COL_ASSISTS= "Assists";
-    	private static final String COL_KDA = "KDA";
-    	private static final String COL_NUM_WINS= "# Wins";
-    	private static final String COL_NUM_GAMES= "# Games";
-    	private static final String COL_WIN_RATE = "Win %";
-    	private static final String COL_CS_0_TO_10 = "cs/min@0-10";
-    	private static final String COL_CS_10_TO_20 = "cs/min@10-20";
-    	private static final String COL_GOLD_0_TO_10 = "gold/min@0-10";
-    	private static final String COL_GOLD_10_TO_20 = "gold/min@10-20";
-    	private static final String COL_XP_0_TO_10 = "xp/min@0-10";
-    	private static final String COL_XP_10_TO_20 = "xp/min@10-20";
-    	
-        private static final String[] DEFAULT_COLS = {
-        								COL_PLAYER_NAME,
-                                        COL_CHAMP,
-                                        COL_KILLS,
-                                        COL_DEATHS,
-                                        COL_ASSISTS,
-                                        COL_KDA,
-                                        COL_NUM_WINS,
-                                        COL_NUM_GAMES,
-                                        COL_WIN_RATE,
-                                        COL_CS_0_TO_10,
-                                        COL_CS_10_TO_20,
-                                        COL_GOLD_0_TO_10,
-                                        COL_GOLD_10_TO_20,
-                                        COL_XP_0_TO_10,
-                                        COL_XP_10_TO_20
-                                  	};
+		NumberFormat percentFormatter = NumberFormat.getPercentInstance();
+		percentFormatter.setMaximumFractionDigits(0);
+		
+		NumberCellRenderer intRenderer = new NumberCellRenderer(NumberFormat.getIntegerInstance());
+		NumberCellRenderer floatRenderer = new NumberCellRenderer(floatFormatter);
+		NumberCellRenderer percentRenderer = new NumberCellRenderer(percentFormatter);
+		
+		table.getColumn(FetchStatsHelper.COL_KILLS).setCellRenderer(intRenderer);
+		table.getColumn(FetchStatsHelper.COL_DEATHS).setCellRenderer(intRenderer);
+		table.getColumn(FetchStatsHelper.COL_ASSISTS).setCellRenderer(intRenderer);
+		table.getColumn(FetchStatsHelper.COL_NUM_WINS).setCellRenderer(intRenderer);
+		table.getColumn(FetchStatsHelper.COL_NUM_GAMES).setCellRenderer(intRenderer);
+        table.getColumn(FetchStatsHelper.COL_GOLD_0_TO_10).setCellRenderer(intRenderer);
+        table.getColumn(FetchStatsHelper.COL_GOLD_10_TO_20).setCellRenderer(intRenderer);
+        table.getColumn(FetchStatsHelper.COL_XP_0_TO_10).setCellRenderer(intRenderer);
+        table.getColumn(FetchStatsHelper.COL_XP_10_TO_20).setCellRenderer(intRenderer);
+		
+        table.getColumn(FetchStatsHelper.COL_KDA).setCellRenderer(floatRenderer);
+        table.getColumn(FetchStatsHelper.COL_CS_0_TO_10).setCellRenderer(floatRenderer);
+        table.getColumn(FetchStatsHelper.COL_CS_10_TO_20).setCellRenderer(floatRenderer);
         
-        private static final Map<String, Integer> COL_HEADER_TO_INDEX = new HashMap<>();
-        
-        {
-        	for (int i = 0; i < DEFAULT_COLS.length; ++i) {
-        		COL_HEADER_TO_INDEX.put(DEFAULT_COLS[i], i);
-        	}
-        }
-        
-        // Variables
-        private final ArrayList<ArrayList<Object>> ALL_DATA = new ArrayList<>();
-        
-        private List<List<Object>> postFilterRows = new ArrayList<>(); // rows after filtering 
-        private List<String> postFilterCols = new ArrayList<>(); // columns after filtering
-        
-        private boolean[] filteredCols = new boolean[DEFAULT_COLS.length]; // defaults to all false (none filtered)
-        //private Set<Integer> colIndexesToFilter = new HashSet<>();
-        private Set<String> playersToFilter = new HashSet<>();
-        
-        // Methods
-        public MyTableModel() {
-        	for (String head : DEFAULT_COLS) {
-        		postFilterCols.add(head);
-        	}
-        	
-        	String url = "http://71.178.243.38/leaguestats/getAllData";
-    		try {
-                String allDataJsonStr = IOUtils.toString(new URL(url), "utf-8");
-                JSONArray allDataRows = (JSONArray) JSONValue.parseWithException(allDataJsonStr);
-                
-                for (Object o : allDataRows) {
-                	JSONObject row = (JSONObject) o;
-                	ArrayList<Object> newRow = new ArrayList<>(DEFAULT_COLS.length);
-                	
-                	newRow.add(row.get(MySqlHelper.COL_SUMMONER_NAME));
-                	newRow.add(row.get(MySqlHelper.COL_CHAMPION_NAME));
-                	newRow.add(myParseInt(row, TOT_KILLS));
-                	newRow.add(myParseInt(row, TOT_DEATHS));
-                	newRow.add(myParseInt(row, TOT_ASSISTS));
-                	newRow.add(myParseFloat(row, KDA));
-                	newRow.add(myParseInt(row, NUM_WINS));
-                	newRow.add(myParseInt(row, NUM_GAMES));
-                	newRow.add(myParseFloat(row, WIN_RATE));
-                	newRow.add(myParseFloat(row, AVG_CS_0_TO_10));
-                	newRow.add(myParseFloat(row, AVG_CS_10_TO_20));
-                	newRow.add(myParseFloat(row, AVG_GOLD_0_TO_10));
-                	newRow.add(myParseFloat(row, AVG_GOLD_10_TO_20));
-                	newRow.add(myParseFloat(row, AVG_XP_0_TO_10));
-                	newRow.add(myParseFloat(row, AVG_XP_10_TO_20));
-                	
-                	ALL_DATA.add(newRow);
-                	postFilterRows.add((List<Object>) newRow.clone());
-                }
-    		} catch (IOException | ParseException e) {
-                e.printStackTrace();
-            }
-        }
-        
-        private Integer myParseInt(JSONObject row, String key) {
-        	Object o = row.get(key);
-        	if (o == null) {
-        		return null;
-        	} else {
-        		return Integer.parseInt((String) o); 
-        	}
-        }
-        
-        private Float myParseFloat(JSONObject row, String key) {
-        	Object o = row.get(key);
-        	if (o == null) {
-        		return null;
-        	} else {
-        		return Float.parseFloat((String) o);        		
-        	}
-        }
-        
-        private void addPlayerFilter(String sumName) {
-        	playersToFilter.add(sumName);
-			filterRowsAndFire();
-        }
-        
-        private void removePlayerFilter(String sumName) {
-        	playersToFilter.remove(sumName);
-			filterRowsAndFire();
-        }
-        
-        private void toggleColFilter(int index) {
-        	filteredCols[index] = !filteredCols[index];
-        	filterColsAndRowsAndFire();
-        }
-        
-        private void filterColsAndRowsAndFire() {
-        	postFilterCols.clear();
-        	for (int i = 0; i < DEFAULT_COLS.length; ++i) {
-        		if (!filteredCols[i]) {
-        			postFilterCols.add(DEFAULT_COLS[i]);
-        		}
-        	}
-        	filterRows();
-			fireTableStructureChanged();
-        }
-        
-        private void filterRowsAndFire() {
-        	filterRows();
-        	fireTableDataChanged();
-        }
-        
-        private void filterRows() {
-        	postFilterRows.clear();
-        	for (List<Object> row : ALL_DATA) {
-        		String name = (String) row.get(COL_HEADER_TO_INDEX.get(COL_PLAYER_NAME));
-        		if (!playersToFilter.contains(name)) {
-        			postFilterRows.add(makeColFilteredRow(row));
-        		}
-        	}
-        }
-        
-        private List<Object> makeColFilteredRow(List<Object> row) {
-        	List<Object> ret = new ArrayList<>();
-        	for (int i = 0; i < row.size(); ++i) {
-        		if (!filteredCols[i]) {
-        			ret.add(row.get(i));
-        		}
-        	}
-        	return ret;
-        }
-        
-        public int getColumnCount() {
-            return postFilterCols.size();
-        }
+        table.getColumn(FetchStatsHelper.COL_WIN_RATE).setCellRenderer(percentRenderer);
+	}
+	
+	private static class NumberCellRenderer extends DefaultTableCellRenderer {
+		private static final long serialVersionUID = 7259333366053151884L;
+		private NumberFormat formatter;
+	    
+		public NumberCellRenderer(NumberFormat formatter) {
+	    	super();
+	    	this.formatter = formatter;
+	    	setHorizontalAlignment(RIGHT);
+    	}
 
-        public int getRowCount() {
-            return postFilterRows.size();
-        }
-
-        public String getColumnName(int col) {
-            return postFilterCols.get(col);
-        }
-
-        public Object getValueAt(int row, int col) {
-        	if (postFilterRows.isEmpty()) return null;
-            return postFilterRows.get(row).get(col);
-        }
-        
-        public Class getColumnClass(int c) {
-        	if (postFilterRows.isEmpty()) return Object.class;
-            return getValueAt(0, c).getClass();
-        }
-    }
+	    public void setValue(Object value) {
+	        setText((value == null) ? "" : formatter.format(value));
+	    }
+	}
     
     public static void createAndShowGUI() {
         // Create and set up the window.
@@ -304,15 +138,32 @@ public class MyTableUI extends JPanel {
         frame.setContentPane(newContentPane);
 
         // Menu Bar
+        @SuppressWarnings("unchecked")
+		Vector<Vector<Object>> data = newContentPane.model.getDataVector();
+        Set<String> allPlayers = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        Map<Character, SortedSet<String>> allChampsByFirstLetter = new TreeMap<>();
+        
+        for (Vector<Object> row : data) {
+        	allPlayers.add((String) row.elementAt(0));
+        	
+        	String champ = (String) row.elementAt(1);
+        	Character start = Character.toUpperCase(champ.charAt(0));
+        	SortedSet<String> set = allChampsByFirstLetter.getOrDefault(start, new TreeSet<>());
+        	set.add(champ);        	
+        	allChampsByFirstLetter.put(start, set);
+        }
+        
         JMenuBar menuBar = new JMenuBar();
         
         /*JMenu filterMenu = new JMenu("Filters");
         menuBar.add(filterMenu);*/
         
-        JMenu playerFilterSubmenu = buildPlayerFilterSubmenu(newContentPane.model);
-        JMenu columnFilterSubmenu = buildColumnsFilterSubmenu(newContentPane.model);
+        JMenu playerFilterSubmenu = newContentPane.buildPlayerFilterSubmenu(allPlayers);
+        JMenu champFilterSubmenu = newContentPane.buildChampFilterSubmenu(allChampsByFirstLetter);
+        JMenu columnFilterSubmenu = newContentPane.buildColumnsFilterSubmenu();
         
         menuBar.add(playerFilterSubmenu);
+        menuBar.add(champFilterSubmenu);
         menuBar.add(columnFilterSubmenu);
         
         frame.setJMenuBar(menuBar);
@@ -323,16 +174,10 @@ public class MyTableUI extends JPanel {
         frame.setVisible(true);
     }
     
-    private static JMenu buildPlayerFilterSubmenu(MyTableModel model) {
+    private JMenu buildPlayerFilterSubmenu(Set<String> allPlayers) {
     	JMenu menu = new JMenu("Players");
     	
-    	SortedSet<String> players = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-    	int index = MyTableModel.COL_HEADER_TO_INDEX.get("Summoner");
-    	for (ArrayList<Object> row : model.ALL_DATA) {
-    		players.add((String) row.get(index));
-    	}
-    	
-    	for (String summonerName : players) {
+    	for (String summonerName : allPlayers) {
     		JCheckBoxMenuItem playerItem = new JCheckBoxMenuItem(summonerName, true);
     		
     		playerItem.setUI(new BasicCheckBoxMenuItemUI() { // make menu stay open after toggling checkbox
@@ -347,27 +192,104 @@ public class MyTableUI extends JPanel {
 				public void itemStateChanged(ItemEvent e) {
 					int stateChange = e.getStateChange();
 					if (stateChange == ItemEvent.DESELECTED) {
-						model.addPlayerFilter(summonerName);
+						filteredPlayers.add(summonerName);
+						sorter.sort();
 					} else if (stateChange == ItemEvent.SELECTED) {
-						model.removePlayerFilter(summonerName);
+						filteredPlayers.remove(summonerName);
+						sorter.sort();
 					} else {
 						System.err.println("Unexpected state change: " + stateChange);
 					}
 				}
 			});
-    		
+
     		menu.add(playerItem);
     	}
-    	    	
     	return menu;
     }
-
-    private static JMenu buildColumnsFilterSubmenu(MyTableModel model) {
+    
+    private JMenu buildChampFilterSubmenu(Map<Character, SortedSet<String>> allChampsByFirstLetter) {
+    	JMenu menu = new JMenu("Champions");
+    	
+    	JMenuItem selectAllItem = new JMenuItem("Select all");
+    	selectAllItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				filteredChamps.clear();
+				sorter.sort();	
+			}
+		});
+    	
+    	JMenuItem deselectAllItem = new JMenuItem("Deselect all");
+    	deselectAllItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				for (SortedSet<String> set : allChampsByFirstLetter.values()) {
+					filteredChamps.addAll(set);
+				}
+				sorter.sort();	
+			}
+		});
+    	
+    	for (Entry<Character, SortedSet<String>> entry : allChampsByFirstLetter.entrySet()) {
+    		JMenu firstLetterSubmenu = new JMenu(entry.getKey() + "...");
+    		for (String champName : entry.getValue()) {
+	    		JCheckBoxMenuItem playerItem = new JCheckBoxMenuItem(champName, true);
+	    		
+	    		playerItem.setUI(new BasicCheckBoxMenuItemUI() { // make menu stay open after toggling checkbox
+	    			@Override
+	    			protected void doClick(MenuSelectionManager msm) {
+	    				playerItem.doClick(0);
+	    			}
+	    		});
+	    		
+	    		playerItem.addItemListener(new ItemListener() {
+					@Override
+					public void itemStateChanged(ItemEvent e) {
+						int stateChange = e.getStateChange();
+						if (stateChange == ItemEvent.DESELECTED) {
+							filteredChamps.add(champName);
+							sorter.sort();
+						} else if (stateChange == ItemEvent.SELECTED) {
+							filteredChamps.remove(champName);
+							sorter.sort();
+						} else {
+							System.err.println("Unexpected state change: " + stateChange);
+						}
+					}
+				});
+	    		
+	    		selectAllItem.addActionListener(new ActionListener() {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						playerItem.setSelected(true);
+					}
+				});
+	    		
+	    		deselectAllItem.addActionListener(new ActionListener() {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						playerItem.setSelected(false);
+					}
+				});
+	    		
+	    		firstLetterSubmenu.add(playerItem);
+    		}
+    		menu.add(firstLetterSubmenu);
+    	}
+    	
+    	menu.add(selectAllItem);
+    	menu.add(deselectAllItem);
+    	
+    	return menu;
+    }
+    
+    private JMenu buildColumnsFilterSubmenu() {
     	JMenu menu = new JMenu("Columns");
     	
-    	for (int i = 2; i < MyTableModel.DEFAULT_COLS.length; ++i) { // cannot filter player name and champion
-    		final int index = i;
-    		JCheckBoxMenuItem columnItem = new JCheckBoxMenuItem(MyTableModel.DEFAULT_COLS[i], true);
+    	for (int i = 2; i < FetchStatsHelper.COL_HEADERS.length; ++i) { // cannot filter player name and champion
+    		JCheckBoxMenuItem columnItem = new JCheckBoxMenuItem(FetchStatsHelper.COL_HEADERS[i], true);
+    		final Object identifier = FetchStatsHelper.COL_HEADERS[i];
     		
     		columnItem.setUI(new BasicCheckBoxMenuItemUI() { // make menu stay open after toggling checkbox
     			@Override
@@ -380,10 +302,15 @@ public class MyTableUI extends JPanel {
 				@Override
 				public void itemStateChanged(ItemEvent e) {
 					int stateChange = e.getStateChange();
+					TableColumn col = table.getColumn(identifier);
 					if (stateChange == ItemEvent.DESELECTED) {
-						model.toggleColFilter(index);
+						col.setResizable(false);
+						col.setMinWidth(0);
+						col.setMaxWidth(0);
 					} else if (stateChange == ItemEvent.SELECTED) {
-						model.toggleColFilter(index);
+						col.setResizable(true);
+						col.setMaxWidth(Integer.MAX_VALUE);
+						col.setPreferredWidth(75);
 					} else {
 						System.err.println("Unexpected state change: " + stateChange);
 					}
@@ -392,7 +319,6 @@ public class MyTableUI extends JPanel {
     		
     		menu.add(columnItem);
     	}
-    	
     	return menu;
     }
     
