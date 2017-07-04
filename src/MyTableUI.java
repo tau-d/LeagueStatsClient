@@ -55,7 +55,18 @@ public class MyTableUI extends JPanel {
 	public MyTableUI() {
         super(new GridLayout(1,0));
 
-        model = new DefaultTableModel(FetchStatsHelper.getData(), FetchStatsHelper.COL_HEADERS);
+        model = new DefaultTableModel(FetchStatsHelper.getData(), FetchStatsHelper.COL_HEADERS) {
+			private static final long serialVersionUID = -1344881329021797774L;
+
+			@Override
+            public Class<?> getColumnClass(int columnIndex) {
+                for (int row = 0; row < getRowCount(); row++) {
+                    Object o = getValueAt(row, columnIndex);
+                    if (o != null) return o.getClass();
+                }
+                return Object.class;
+            }
+        };
         model.setColumnIdentifiers(FetchStatsHelper.COL_HEADERS);
         
         table = new JTable(model);
@@ -112,6 +123,7 @@ public class MyTableUI extends JPanel {
         table.getColumn(FetchStatsHelper.COL_WIN_RATE).setCellRenderer(percentRenderer);
 	}
 	
+	
 	private static class NumberCellRenderer extends DefaultTableCellRenderer {
 		private static final long serialVersionUID = 7259333366053151884L;
 		private NumberFormat formatter;
@@ -126,6 +138,7 @@ public class MyTableUI extends JPanel {
 	        setText((value == null) ? "" : formatter.format(value));
 	    }
 	}
+	
     
     public static void createAndShowGUI() {
         // Create and set up the window.
@@ -174,6 +187,7 @@ public class MyTableUI extends JPanel {
         frame.setVisible(true);
     }
     
+    
     private JMenu buildPlayerFilterSubmenu(Set<String> allPlayers) {
     	JMenu menu = new JMenu("Players");
     	
@@ -207,6 +221,7 @@ public class MyTableUI extends JPanel {
     	}
     	return menu;
     }
+    
     
     private JMenu buildChampFilterSubmenu(Map<Character, SortedSet<String>> allChampsByFirstLetter) {
     	JMenu menu = new JMenu("Champions");
@@ -283,6 +298,7 @@ public class MyTableUI extends JPanel {
     	
     	return menu;
     }
+    
     
     private JMenu buildColumnsFilterSubmenu() {
     	JMenu menu = new JMenu("Columns");
