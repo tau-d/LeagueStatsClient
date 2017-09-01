@@ -1,6 +1,7 @@
+package LeagueStatsClient;
+
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.MenuItem;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -8,7 +9,6 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.text.NumberFormat;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -28,13 +28,10 @@ import javax.swing.JTable;
 import javax.swing.MenuSelectionManager;
 import javax.swing.RowFilter;
 import javax.swing.plaf.basic.BasicCheckBoxMenuItemUI;
-import javax.swing.plaf.basic.BasicMenuItemUI;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
-
-import com.sun.xml.internal.ws.api.Component;
 
 // TODO: allow user to filter champs with low # games, etc.
 // TODO: update table button
@@ -42,8 +39,44 @@ import com.sun.xml.internal.ws.api.Component;
 // TODO: preset column filter buttons (ex. show only player, champ, cs0-10, cs10-20, xp0-10, ...)
 // TODO: only include matches within certain time period?
 
+
 public class MyTableUI extends JPanel {
 	private static final long serialVersionUID = 8306936611643892010L;
+
+	// Table column headers
+	public static final String COL_PLAYER_NAME = "Summoner";
+	public static final String COL_CHAMP = "Champion";
+	public static final String COL_KILLS = "Kills";
+	public static final String COL_DEATHS= "Deaths";
+	public static final String COL_ASSISTS= "Assists";
+	public static final String COL_KDA = "KDA";
+	public static final String COL_NUM_WINS= "# Wins";
+	public static final String COL_NUM_GAMES= "# Games";
+	public static final String COL_WIN_RATE = "Win %";
+	public static final String COL_CS_0_TO_10 = "cs/min@0-10";
+	public static final String COL_CS_10_TO_20 = "cs/min@10-20";
+	public static final String COL_GOLD_0_TO_10 = "gold/min@0-10";
+	public static final String COL_GOLD_10_TO_20 = "gold/min@10-20";
+	public static final String COL_XP_0_TO_10 = "xp/min@0-10";
+	public static final String COL_XP_10_TO_20 = "xp/min@10-20";
+	
+	public static final String[] COL_HEADERS = {
+									COL_PLAYER_NAME,
+	                                COL_CHAMP,
+	                                COL_KILLS,
+	                                COL_DEATHS,
+	                                COL_ASSISTS,
+	                                COL_KDA,
+	                                COL_NUM_WINS,
+	                                COL_NUM_GAMES,
+	                                COL_WIN_RATE,
+	                                COL_CS_0_TO_10,
+	                                COL_CS_10_TO_20,
+	                                COL_GOLD_0_TO_10,
+	                                COL_GOLD_10_TO_20,
+	                                COL_XP_0_TO_10,
+	                                COL_XP_10_TO_20
+	                          	};
 
 	private JTable table;
 	private DefaultTableModel model;
@@ -55,7 +88,7 @@ public class MyTableUI extends JPanel {
 	public MyTableUI() {
         super(new GridLayout(1,0));
 
-        model = new DefaultTableModel(FetchStatsHelper.getData(), FetchStatsHelper.COL_HEADERS) {
+        model = new DefaultTableModel(FetchStatsHelper.getData(), COL_HEADERS) {
 			private static final long serialVersionUID = -1344881329021797774L;
 
 			@Override
@@ -67,7 +100,7 @@ public class MyTableUI extends JPanel {
                 return Object.class;
             }
         };
-        model.setColumnIdentifiers(FetchStatsHelper.COL_HEADERS);
+        model.setColumnIdentifiers(COL_HEADERS);
         
         table = new JTable(model);
         table.setPreferredScrollableViewportSize(new Dimension(900, 800));
@@ -106,21 +139,21 @@ public class MyTableUI extends JPanel {
 		NumberCellRenderer floatRenderer = new NumberCellRenderer(floatFormatter);
 		NumberCellRenderer percentRenderer = new NumberCellRenderer(percentFormatter);
 		
-		table.getColumn(FetchStatsHelper.COL_KILLS).setCellRenderer(intRenderer);
-		table.getColumn(FetchStatsHelper.COL_DEATHS).setCellRenderer(intRenderer);
-		table.getColumn(FetchStatsHelper.COL_ASSISTS).setCellRenderer(intRenderer);
-		table.getColumn(FetchStatsHelper.COL_NUM_WINS).setCellRenderer(intRenderer);
-		table.getColumn(FetchStatsHelper.COL_NUM_GAMES).setCellRenderer(intRenderer);
-        table.getColumn(FetchStatsHelper.COL_GOLD_0_TO_10).setCellRenderer(intRenderer);
-        table.getColumn(FetchStatsHelper.COL_GOLD_10_TO_20).setCellRenderer(intRenderer);
-        table.getColumn(FetchStatsHelper.COL_XP_0_TO_10).setCellRenderer(intRenderer);
-        table.getColumn(FetchStatsHelper.COL_XP_10_TO_20).setCellRenderer(intRenderer);
+		table.getColumn(COL_KILLS).setCellRenderer(intRenderer);
+		table.getColumn(COL_DEATHS).setCellRenderer(intRenderer);
+		table.getColumn(COL_ASSISTS).setCellRenderer(intRenderer);
+		table.getColumn(COL_NUM_WINS).setCellRenderer(intRenderer);
+		table.getColumn(COL_NUM_GAMES).setCellRenderer(intRenderer);
+        table.getColumn(COL_GOLD_0_TO_10).setCellRenderer(intRenderer);
+        table.getColumn(COL_GOLD_10_TO_20).setCellRenderer(intRenderer);
+        table.getColumn(COL_XP_0_TO_10).setCellRenderer(intRenderer);
+        table.getColumn(COL_XP_10_TO_20).setCellRenderer(intRenderer);
 		
-        table.getColumn(FetchStatsHelper.COL_KDA).setCellRenderer(floatRenderer);
-        table.getColumn(FetchStatsHelper.COL_CS_0_TO_10).setCellRenderer(floatRenderer);
-        table.getColumn(FetchStatsHelper.COL_CS_10_TO_20).setCellRenderer(floatRenderer);
+        table.getColumn(COL_KDA).setCellRenderer(floatRenderer);
+        table.getColumn(COL_CS_0_TO_10).setCellRenderer(floatRenderer);
+        table.getColumn(COL_CS_10_TO_20).setCellRenderer(floatRenderer);
         
-        table.getColumn(FetchStatsHelper.COL_WIN_RATE).setCellRenderer(percentRenderer);
+        table.getColumn(COL_WIN_RATE).setCellRenderer(percentRenderer);
 	}
 	
 	
@@ -303,9 +336,9 @@ public class MyTableUI extends JPanel {
     private JMenu buildColumnsFilterSubmenu() {
     	JMenu menu = new JMenu("Columns");
     	
-    	for (int i = 2; i < FetchStatsHelper.COL_HEADERS.length; ++i) { // cannot filter player name and champion
-    		JCheckBoxMenuItem columnItem = getJCheckBoxMenuItem(FetchStatsHelper.COL_HEADERS[i]);
-    		final Object identifier = FetchStatsHelper.COL_HEADERS[i];
+    	for (int i = 2; i < COL_HEADERS.length; ++i) { // cannot filter player name and champion
+    		JCheckBoxMenuItem columnItem = getJCheckBoxMenuItem(COL_HEADERS[i]);
+    		final Object identifier = COL_HEADERS[i];
     		
     		columnItem.setUI(new BasicCheckBoxMenuItemUI() { // make menu stay open after toggling checkbox
     			@Override
@@ -347,10 +380,10 @@ public class MyTableUI extends JPanel {
     }
     
     private JCheckBoxMenuItem getJCheckBoxMenuItem(String id) {
-    	if (id == FetchStatsHelper.COL_KILLS ||
-			id == FetchStatsHelper.COL_DEATHS ||
-			id == FetchStatsHelper.COL_ASSISTS || 
-			id == FetchStatsHelper.COL_NUM_WINS) {
+    	if (id == COL_KILLS ||
+			id == COL_DEATHS ||
+			id == COL_ASSISTS || 
+			id == COL_NUM_WINS) {
     		
     		hideColumn(table.getColumn(id));    		
 			return new JCheckBoxMenuItem(id, false);

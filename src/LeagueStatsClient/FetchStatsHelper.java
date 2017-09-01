@@ -1,3 +1,5 @@
+package LeagueStatsClient;
+
 import java.io.IOException;
 import java.net.URL;
 
@@ -23,49 +25,16 @@ public class FetchStatsHelper {
 	private static final String AVG_XP_0_TO_10 = "avgXp0to10";
 	private static final String AVG_XP_10_TO_20 = "avgXp10to20";
 	
-	// Table column headers
-	public static final String COL_PLAYER_NAME = "Summoner";
-	public static final String COL_CHAMP = "Champion";
-	public static final String COL_KILLS = "Kills";
-	public static final String COL_DEATHS= "Deaths";
-	public static final String COL_ASSISTS= "Assists";
-	public static final String COL_KDA = "KDA";
-	public static final String COL_NUM_WINS= "# Wins";
-	public static final String COL_NUM_GAMES= "# Games";
-	public static final String COL_WIN_RATE = "Win %";
-	public static final String COL_CS_0_TO_10 = "cs/min@0-10";
-	public static final String COL_CS_10_TO_20 = "cs/min@10-20";
-	public static final String COL_GOLD_0_TO_10 = "gold/min@0-10";
-	public static final String COL_GOLD_10_TO_20 = "gold/min@10-20";
-	public static final String COL_XP_0_TO_10 = "xp/min@0-10";
-	public static final String COL_XP_10_TO_20 = "xp/min@10-20";
-	
-	public static final String[] COL_HEADERS = {
-									COL_PLAYER_NAME,
-	                                COL_CHAMP,
-	                                COL_KILLS,
-	                                COL_DEATHS,
-	                                COL_ASSISTS,
-	                                COL_KDA,
-	                                COL_NUM_WINS,
-	                                COL_NUM_GAMES,
-	                                COL_WIN_RATE,
-	                                COL_CS_0_TO_10,
-	                                COL_CS_10_TO_20,
-	                                COL_GOLD_0_TO_10,
-	                                COL_GOLD_10_TO_20,
-	                                COL_XP_0_TO_10,
-	                                COL_XP_10_TO_20
-	                          	};
+	private static final String SERVER_IP = "71.178.160.111";
 	
 	public static Object[][] getData() {
-		String url = "http://71.178.243.38/leaguestats/getAllData";
+		String url = "http://" + SERVER_IP + "/leaguestats/getAllData";
 		try {
 	        String allDataJsonStr = IOUtils.toString(new URL(url), "utf-8");
 	        JSONArray allDataRows = (JSONArray) JSONValue.parseWithException(allDataJsonStr);
 	        
 	        final int numRows = allDataRows.size();
-	        final int numCols = COL_HEADERS.length;
+	        final int numCols = ((JSONObject) allDataRows.get(0)).size();
 	        Object[][] data = new Object[numRows][numCols];
 	        for (int row = 0; row < numRows; ++row) {
         		JSONObject rowObj = (JSONObject) allDataRows.get(row);

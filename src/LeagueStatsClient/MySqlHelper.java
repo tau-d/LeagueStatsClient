@@ -1,3 +1,4 @@
+package LeagueStatsClient;
 
 public class MySqlHelper {
 
